@@ -1,5 +1,7 @@
 name: Build MRS
 
+# Automatically rebuild MRS whenever a custom rule list changes.
+
 on:
   push:
     branches:
