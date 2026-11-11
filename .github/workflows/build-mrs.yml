@@ -1,0 +1,93 @@
+name: Build MRS
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "rules/*.list"
+      - ".github/workflows/build-mrs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  MIHOMO_VERSION: "v1.19.33"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Mihomo
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          url="https://github.com/MetaCubeX/mihomo/releases/download/${MIHOMO_VERSION}/mihomo-linux-amd64-v1-${MIHOMO_VERSION}.gz"
+
+          curl -fL --retry 3 "$url" -o mihomo.gz
+          gzip -d mihomo.gz
+          chmod +x mihomo
+
+          ./mihomo -v
+
+      - name: Build MRS
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf output
+          mkdir -p output
+
+          shopt -s nullglob
+
+          files=(rules/*.list)
+
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No rule files found."
+            exit 1
+          fi
+
+          for file in "${files[@]}"; do
+            name="$(basename "$file" .list)"
+
+            echo "Building $name.mrs ..."
+
+            ./mihomo convert-ruleset \
+              domain \
+              text \
+              "$file" \
+              "output/$name.mrs"
+          done
+
+          ls -lh output/
+
+      - name: Publish MRS to release branch
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Save generated files outside the Git worktree.
+          rm -rf /tmp/mrs-output
+          mkdir -p /tmp/mrs-output
+          cp output/*.mrs /tmp/mrs-output/
+
+          # Rebuild the release branch from scratch.
+          git fetch origin release:release || true
+          git checkout --orphan release
+
+          git rm -rf . || true
+
+          cp /tmp/mrs-output/*.mrs .
+
+          git add '*.mrs'
+          git commit -m "build: update MRS"
+          git push origin release --force
