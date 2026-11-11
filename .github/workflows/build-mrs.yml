@@ -94,13 +94,21 @@ jobs:
         run: |
           set -euo pipefail
 
+          shopt -s nullglob
+          outputs=(output/*.mrs)
+
+          if [ ${#outputs[@]} -eq 0 ]; then
+            echo "No generated MRS files. Nothing to publish."
+            exit 0
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
           # Save generated files outside the Git worktree.
           rm -rf /tmp/mrs-output
           mkdir -p /tmp/mrs-output
-          cp output/*.mrs /tmp/mrs-output/
+          cp "${outputs[@]}" /tmp/mrs-output/
 
           # Rebuild the release branch from scratch.
           git fetch origin release:release || true
