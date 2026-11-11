@@ -1,0 +1,5 @@
+# Mihomo custom proxy domain rules
+# One rule per line.
+# Examples:
+# example.com
+# +.example.com
