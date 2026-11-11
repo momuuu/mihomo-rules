@@ -51,21 +51,41 @@ jobs:
           files=(rules/*.list)
 
           if [ ${#files[@]} -eq 0 ]; then
-            echo "No rule files found."
-            exit 1
+            echo "No rule files found. Nothing to build."
+            exit 0
           fi
+
+          built=0
 
           for file in "${files[@]}"; do
             name="$(basename "$file" .list)"
+            tmp="rules/.${name}.build.list"
+
+            # Ignore blank lines and full-line comments.
+            grep -vE '^[[:space:]]*(#|$)' "$file" > "$tmp" || true
+
+            if [ ! -s "$tmp" ]; then
+              echo "Skipping $file: no active rules."
+              rm -f "$tmp"
+              continue
+            fi
 
             echo "Building $name.mrs ..."
 
             ./mihomo convert-ruleset \
               domain \
               text \
-              "$file" \
+              "$tmp" \
               "output/$name.mrs"
+
+            rm -f "$tmp"
+            built=$((built + 1))
           done
+
+          if [ "$built" -eq 0 ]; then
+            echo "No non-empty rule lists. Nothing to publish."
+            exit 0
+          fi
 
           ls -lh output/
 
