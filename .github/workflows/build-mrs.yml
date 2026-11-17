@@ -110,9 +110,9 @@ jobs:
           mkdir -p /tmp/mrs-output
           cp "${outputs[@]}" /tmp/mrs-output/
 
-          # Rebuild the release branch from scratch.
-          git fetch origin release:release || true
-          git checkout --orphan release
+          # Rebuild the remote release branch from scratch without creating
+          # a conflicting local branch named "release".
+          git checkout --orphan release-publish
 
           git rm -rf . || true
 
@@ -120,4 +120,4 @@ jobs:
 
           git add '*.mrs'
           git commit -m "build: update MRS"
-          git push origin release --force
+          git push origin HEAD:release --force
